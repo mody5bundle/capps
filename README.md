@@ -11,7 +11,20 @@
 # Example container
 
 ```
-podman run --rm -d --hostname firefox --name firefox-$RANDOM --cap-drop=ALL --read-only=true --read-only-tmpfs=false --systemd=false --userns=keep-id --security-opt=no-new-privileges --memory=2048mb --cap-add cap_sys_chroot --volume $HOME/Downloads/:/home/firefox/Downloads:rw --volume /run/user/$UID/pulse/native:/run/user/$UID/pulse/native:ro --volume $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro localhost/firefox
+podman run --rm -d --hostname firefox \
+--name firefox-$RANDOM \
+--cap-drop=ALL \
+--read-only=true \
+--read-only-tmpfs=false \
+--systemd=false \
+--userns=keep-id \
+--security-opt=no-new-privileges \
+--memory=2048mb \
+--cap-add cap_sys_chroot \
+--volume $HOME/Downloads/:/home/firefox/Downloads:rw \
+--volume /run/user/$UID/pulse/native:/run/user/$UID/pulse/native:ro \
+--volume $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro \
+localhost/firefox
 ```
 
 
