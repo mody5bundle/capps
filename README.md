@@ -8,26 +8,6 @@
 - easy rollback with version pinning
 - works on wayland
 
-# Example container
-
-```
-podman run --rm -d --hostname firefox \
---name firefox-$RANDOM \
---cap-drop=ALL \
---read-only=true \
---read-only-tmpfs=false \
---systemd=false \
---userns=keep-id \
---security-opt=no-new-privileges \
---memory=2048mb \
---cap-add cap_sys_chroot \
---volume $HOME/Downloads/:/home/firefox/Downloads:rw \
---volume /run/user/$UID/pulse/native:/run/user/$UID/pulse/native:ro \
---volume $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro \
-localhost/firefox
-```
-
-
 # Usage
 ```
 capps.py [-h] [-a app1 app2 ... [app1 app2 ... ...]] [-c /path/to/config.yaml] [-b] [-r] [-i] [-v] [-s] [-d] [-l]
@@ -47,6 +27,81 @@ options:
   -s, --stats           enable stats output
   -d, --debug           enable debug log output
   -l, --list            print available container
+```
+
+# Example container that gets Created
+
+```
+podman run --rm -d --hostname firefox \
+--name firefox-$RANDOM \
+--cap-drop=ALL \
+--read-only=true \
+--read-only-tmpfs=false \
+--systemd=false \
+--userns=keep-id \
+--security-opt=no-new-privileges \
+--memory=2048mb \
+--cap-add cap_sys_chroot \
+--volume $HOME/Downloads/:/home/firefox/Downloads:rw \
+--volume /run/user/$UID/pulse/native:/run/user/$UID/pulse/native:ro \
+--volume $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro \
+localhost/firefox
+```
+
+
+
+# Example config file for firefox
+```
+default_permissions: &default_permissions
+  cap-drop: ALL
+  read-only: true
+  read-only-tmpfs: true
+  systemd: false
+  userns: keep-id
+  security-opt: "no-new-privileges"
+volumes:
+  - &sound "/run/user/$UID/pulse/native:/run/user/$UID/pulse/native:ro"
+  - &wayland "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro"
+  - &x11 /tmp/.X11-unix:/tmp/.X11-unix:ro
+container:
+  firefox:
+    versioncmd: "firefox --version | awk \"'\"{print \\$3}\"'\""
+    repo: "localhost"
+    file: "firefox.dockerfile"
+    path: "./container/firefox/"
+    icon: "firefox.png"
+    permissions:
+      memory: 2048mb
+      <<: *default_permissions
+      read-only-tmpfs: false
+      cap-add:
+        - "cap_sys_chroot"
+      volume:
+        - "$HOME/Downloads/:/home/firefox/Downloads:rw"
+        - *sound
+        - *wayland
+```
+
+
+## list images
+
+```
+./capps.py -l
+Available Containers in config:
+firefox: 	Mem: 2048mb, 	Capabilities:  ['cap_sys_chroot'], 	cap-drop: ALL
+Available images on host for firefox:
+['localhost/firefox:latest', 'localhost/firefox:98.0']	Entrypoint: ['/bin/sh', '-c', '/usr/bin/firefox --private --private-window']	Size: 1178 MB	 	3391 Minutes old.
+['localhost/firefox:97.0.1']	Entrypoint: ['/bin/sh', '-c', '/usr/bin/firefox --private --private-window']	Size: 1182 MB	 	26452 Minutes old.
+['localhost/firefox:96.0']	Entrypoint: ['/bin/sh', '-c', '/usr/bin/firefox --private --private-window']	Size: 1156 MB	 	96024 Minutes old.
+```
+
+## get stats on started container
+
+```
+./capps.py -a firefox -s
+NAME			MEM			                     CPU	 READ/WRITE   PIDS
+firefox-18685:	 232.1MB / 2.147GB / 10.81% 	 3.17% 	 -- / -- 57
+firefox-18685:	 497.1MB / 2.147GB / 23.15% 	 2.24% 	 0B / 2.049MB 226
 ```
 
 ## Selinux:
