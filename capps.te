@@ -1,0 +1,27 @@
+module mooncake 1.0;
+
+require {
+	type dri_device_t;
+	type unconfined_dbusd_t;
+	type container_t;
+	type user_tmp_t;
+	type unconfined_t;
+	class sock_file write;
+	class sock_file read;
+	class file { map write read watch };
+	class dbus { acquire_svc send_msg };
+	class unix_stream_socket connectto;
+	class chr_file { getattr ioctl read write };
+}
+
+#============= container_t ==============
+allow container_t dri_device_t:chr_file { getattr ioctl read write };
+allow container_t unconfined_dbusd_t:dbus { acquire_svc send_msg };
+allow container_t unconfined_dbusd_t:unix_stream_socket connectto;
+allow container_t unconfined_t:unix_stream_socket connectto;
+allow container_t user_tmp_t:file { map write };
+allow container_t unconfined_t:dbus send_msg;
+allow container_t user_tmp_t:sock_file { read write };
+
+#============= unconfined_t ==============
+allow unconfined_t container_t:dbus send_msg;

@@ -1,0 +1,143 @@
+default_permissions: &default_permissions
+  cap-drop: ALL
+  read-only: true
+  read-only-tmpfs: true
+  systemd: false
+  userns: keep-id
+  security-opt: "no-new-privileges"
+volumes:
+  - &sound "/run/user/$UID/pulse/native:/run/user/$UID/pulse/native:ro"
+  - &wayland "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY:ro"
+  - &x11 /tmp/.X11-unix:/tmp/.X11-unix:ro
+container:
+  firefox:
+    versioncmd: "firefox --version | awk \"'\"{print \\$3}\"'\""
+    repo: "localhost"
+    file: "firefox.dockerfile"
+    path: "./container/firefox/"
+    icon: "firefox.png"
+    permissions:
+      memory: 2048mb
+      <<: *default_permissions
+      read-only-tmpfs: false
+      cap-add:
+        - "cap_sys_chroot"
+      volume:
+        - "$HOME/Downloads/:/home/firefox/Downloads:rw"
+        - *sound
+        - *wayland
+  spotify:
+    versioncmd: "spotify --version | awk \"'\"{print \\$3}\"'\"  | tr -d ,"
+    repo: "localhost"
+    file: "spotify.dockerfile"
+    path: "./container/spotify/"
+    icon: "spotify.png"
+    permissions:
+      <<: *default_permissions
+      read-only-tmpfs: false
+      memory: 1024mb
+      env: "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$UID/bus"
+      device:
+        - /dev/snd/:/dev/snd/
+      volume:
+        - $HOME/.config/spotify/:/home/spotify/.config/spotify/:z
+        - /run/user/$UID/bus:/run/user/$UID/bus:ro
+        - *x11
+        - *sound
+        - *wayland
+  chromium:
+    versioncmd: "chromium-browser --version | awk \"'\"{print \\$2}\"'\""
+    repo: "localhost"
+    file: "chromium.dockerfile"
+    path: "./container/chromium/"
+    icon: "spotify.png"
+    permissions:
+      <<: *default_permissions
+      read-only-tmpfs: false
+      memory: 1024mb
+      env: "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$UID/bus"
+      device:
+        - /dev/snd/:/dev/snd/
+      volume:
+        # - $HOME/.config/chromium/:/home/chromium/.config/chromium/:z
+        - /run/user/$UID/bus:/run/user/$UID/bus:ro
+        - *x11
+        - *sound
+        - *wayland
+  atom:
+    versioncmd: "atom --version | head -n1 | awk \"'\"{print \\$3}\"'\""
+    repo: "localhost"
+    file: "atom.dockerfile"
+    path: "./container/atom/"
+    icon: "atom.png"
+    permissions:
+      <<: *default_permissions
+      memory: 2048mb
+      net: "none"
+      cap-add:
+        - "cap_sys_chroot"
+      volume:
+        - *x11
+        - $HOME/workbench/:/workdir/:rw
+        - $HOME/.atom:/home/atom/.atom/:z
+        - $HOME/.config/Atom/:/home/atom/.config/Atom:z
+        - *wayland
+  vlc:
+    versioncmd: "vlc --version | grep VLC | head -n 1 | awk \"'\"{print \\$3}\"'\""
+    repo: "localhost"
+    file: "vlc.dockerfile"
+    path: "./container/vlc/"
+    icon: "vlc.png"
+    permissions:
+      <<: *default_permissions
+      memory: 1024mb
+      volume:
+        - "/run/user/$UID/:/run/user/$UID/"
+        - *x11
+        - *wayland
+        - *sound
+  codium:
+    versioncmd: "codium --version | head -n1"
+    repo: "localhost"
+    file: "codium.dockerfile"
+    path: "./container/codium/"
+    icon: "codium.png"
+    permissions:
+      <<: *default_permissions
+      memory: 2048mb
+      net: none
+      cap-add:
+        - "cap_sys_chroot"
+      volume:
+        - "$HOME/workbench:/home/codium/workdir:rw"
+        - *x11
+        - *wayland
+  drawio:
+    versioncmd: "drawio --version"
+    repo: "localhost"
+    file: "drawio.dockerfile"
+    path: "./container/drawio/"
+    icon: "drawio.png"
+    permissions:
+      net: none
+      memory: 512mb
+      <<: *default_permissions
+      cap-add:
+        - "cap_sys_chroot"
+      volume:
+        - *x11
+        - *wayland
+  sandbox:
+    versioncmd: "gnome-terminal --version | awk \"'\"{print \\$4}\"'\""
+    repo: "localhost"
+    file: "bash.dockerfile"
+    path: "./container/sandbox/"
+    icon: "sandbox.png"
+    permissions:
+      <<: *default_permissions
+      memory: 2048mb
+      read-only: false
+      read-only-tmpfs: false
+      volume:
+        - *x11
+        - *wayland
