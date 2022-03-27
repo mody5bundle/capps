@@ -1,4 +1,4 @@
-# Why?
+## Why?
 
 - restrict scope of file system access
 - run any application without root privileges
@@ -8,7 +8,32 @@
 - easy rollback with version pinning
 - works on wayland
 
-# Usage
+# Installation:
+
+#### Tested and verified:
+
+- [x] Fedora 35
+- [ ] Ubuntu 21.10 #3
+
+#### Fedora 35
+```
+pip install --user pyyaml
+pip install --user jinja2
+checkmodule -M -m -o capps.mod capps.te
+semodule_package -o capps.pp -m capps.mod
+sudo semodule -i capps.pp
+./capps.py -a firefox -d
+```
+
+### Ubuntu 21.10
+
+```
+sudo apt install git python3 python3-pip podman
+pip3 install jinja2
+./capps.py -a sandbox -d
+```
+
+## Usage
 ```
 capps.py [-h] [-a app1 app2 ... [app1 app2 ... ...]] [-c /path/to/config.yaml] [-b] [-r] [-i] [-v] [-s] [-d] [-l]
 
@@ -29,7 +54,7 @@ options:
   -l, --list            print available container
 ```
 
-# Example container that gets Created
+## Example container that gets Created
 
 ```
 podman run --rm -d --hostname firefox \
@@ -50,7 +75,7 @@ localhost/firefox
 
 
 
-# Example config file for firefox
+## Example config file for firefox
 ```
 default_permissions: &default_permissions
   cap-drop: ALL
@@ -99,7 +124,7 @@ Available images on host for firefox:
 
 ```
 ./capps.py -a firefox -s
-NAME			MEM			                     CPU	 READ/WRITE   PIDS
+NAME			MEM			  CPU	 READ/WRITE   PIDS
 firefox-18685:	 232.1MB / 2.147GB / 10.81% 	 3.17% 	 -- / -- 57
 firefox-18685:	 497.1MB / 2.147GB / 23.15% 	 2.24% 	 0B / 2.049MB 226
 ```
