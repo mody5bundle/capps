@@ -179,6 +179,7 @@ def craft_run_cmd(container, name):
 
 def install_desktop(container, name):
     run_cmd = craft_run_cmd(container, name)
+    home_dir = os.path.expanduser("~")
     template = (
         jinja2.Environment(
             loader=jinja2.FileSystemLoader(searchpath="./"), autoescape=True
@@ -187,10 +188,10 @@ def install_desktop(container, name):
         .render(name=name, run_cmd=run_cmd)
     )
     desktop_file_path = (
-        "/home/hendrik/.local/share/applications/" + name + "-podman.desktop"
+        os.path.join(home_dir, ".local/share/applications/", name + "-podman.desktop")
     )
     icon_src_path = container["path"] + container["icon"]
-    icon_file_path = "/home/hendrik/.local/share/icons/" + name + "-podman.png"
+    icon_file_path = os.path.join(home_dir, ".local/share/icons/", name + "-podman.png")
     copyfile(icon_src_path, icon_file_path)
     logger.info("Copy icon from " + icon_src_path + " to: " + icon_file_path)
     logger.info("Installing dektop file for " + name + " in: " + desktop_file_path)
