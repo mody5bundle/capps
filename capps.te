@@ -1,4 +1,4 @@
-module mooncake 1.0;
+module capps 1.0;
 
 require {
 	type dri_device_t;
