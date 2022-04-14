@@ -18,6 +18,7 @@ container:
     icon: "firefox.png"
     permissions:
       memory: 2048mb
+      cpus: "1.5"
       <<: *default_permissions
       read-only-tmpfs: false
       cap-add:
@@ -36,6 +37,7 @@ container:
       <<: *default_permissions
       read-only-tmpfs: false
       memory: 1024mb
+      cpus: "0.75"
       env: "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$UID/bus"
       device:
         - /dev/snd/:/dev/snd/
@@ -73,6 +75,7 @@ container:
     permissions:
       <<: *default_permissions
       memory: 2048mb
+      cpus: "1.75"
       net: "none"
       cap-add:
         - "cap_sys_chroot"
@@ -91,6 +94,7 @@ container:
     permissions:
       <<: *default_permissions
       memory: 1024mb
+      cpus: "1.5"
       volume:
         - "/run/user/$UID/:/run/user/$UID/"
         - *x11
@@ -105,6 +109,7 @@ container:
     permissions:
       <<: *default_permissions
       memory: 2048mb
+      cpus: "2"
       net: none
       cap-add:
         - "cap_sys_chroot"
@@ -121,6 +126,7 @@ container:
     permissions:
       net: none
       memory: 512mb
+      cpus: "1.5"
       <<: *default_permissions
       cap-add:
         - "cap_sys_chroot"
@@ -136,6 +142,7 @@ container:
     permissions:
       <<: *default_permissions
       memory: 2048mb
+      cpus: "4"
       read-only: false
       read-only-tmpfs: false
       volume:
