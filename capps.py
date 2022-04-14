@@ -11,7 +11,14 @@ import jinja2
 import os
 from argparse import ArgumentParser
 from shutil import copyfile
+import shlex
 
+user_id = str(os.getuid())
+podman_path = "/usr/bin/podman"
+wayland_display = os.path.expandvars("$WAYLAND_DISPLAY")
+xdg_runtime_path = os.path.expandvars("$XDG_RUNTIME_DIR")
+pulse_socket = "/run/user/" + user_id + "/pulse/native"
+home_dir = os.path.expanduser("~")
 
 def load_config(path="config.yml"):
     logger.info("Loading config: " + path)
@@ -27,7 +34,7 @@ def podman_image_inspect(id):
     check_image = "podman image inspect --format json " + id
     try:
         image_json = json.loads(
-            subprocess.check_output(check_image, shell=True).decode()
+            subprocess.check_output(shlex.split(check_image), shell=False).decode()
         )
     except subprocess.CalledProcessError:
         image_json = ""
@@ -40,7 +47,7 @@ def podman_container_inspect(id):
     try:
         container_json = json.loads(
             subprocess.check_output(
-                check_container, shell=True, stderr=subprocess.STDOUT
+                shlex.split(check_container), shell=False, stderr=subprocess.STDOUT
             ).decode()
         )[0]
     except subprocess.CalledProcessError:
@@ -53,7 +60,7 @@ def podman_stats(id):
     try:
         json_stats = json.loads(
             subprocess.check_output(
-                container_stats, shell=True, stderr=subprocess.STDOUT
+                shlex.split(container_stats), shell=False, stderr=subprocess.STDOUT
             ).decode()
         )
     except subprocess.CalledProcessError:
@@ -67,7 +74,7 @@ def podman_stats(id):
 
 def check_images(config, name):
     podman_image_list = "podman image list --format json"
-    get_image = subprocess.check_output(podman_image_list, shell=True).decode()
+    get_image = subprocess.check_output(shlex.split(podman_image_list), shell=False).decode()
     image_list = json.loads(get_image)
     for image in image_list:
         if not "Dangling" in image:
@@ -89,7 +96,7 @@ def build_image(image, name):
         "podman image build "
         + flags
         + " --build-arg USER="
-        + str(os.getuid())
+        + user_id
         + " -t "
         + image["repo"]
         + "/"
@@ -111,18 +118,18 @@ def build_image(image, name):
     )
     logger.debug("Version command: " + version_cmd)
     try:
-      old_version = subprocess.check_output(version_cmd, shell=True).decode().strip("\n")
+      old_version = subprocess.check_output(shlex.split(version_cmd), shell=False).decode().strip("\n")
       logger.info("Old Version for for: " + image["repo"] + "/" + name + ": " + old_version)
     except subprocess.CalledProcessError as e:
       logger.info("Old Version for for: " + image["repo"] + "/" + name + ": " + "Not Found!")
     logger.debug("Build command: " + build_cmd)
     logger.info("Starting build for: " + image["repo"] + "/" + name)
     try:
-        new_image = subprocess.check_output(build_cmd, shell=True).decode().strip("\n")
+        new_image = subprocess.check_output(shlex.split(build_cmd), shell=False).decode().strip("\n")
     except subprocess.CalledProcessError:
         new_image = ""
     logger.info("Build image for: " + name + ": [" + new_image + "]")
-    new_version = subprocess.check_output(version_cmd, shell=True).decode().strip("\n").strip("\r")
+    new_version = subprocess.check_output(shlex.split(version_cmd), shell=False).decode().strip("\n").strip("\r")
     tag_cmd = (
       "podman tag "
       + new_image
@@ -134,7 +141,7 @@ def build_image(image, name):
       + new_version)
     logger.info("Tagging new Version for for: " + tag_cmd)
     try:
-        tag_image_version = subprocess.check_output(tag_cmd, shell=True).decode().strip("\n")
+        tag_image_version = subprocess.check_output(shlex.split(tag_cmd), shell=False).decode().strip("\n")
     except subprocess.CalledProcessError:
         tag_image_version = ""
     return new_image
@@ -144,7 +151,7 @@ def run_image(container, name):
     run_cmd = craft_run_cmd(container, name)
     logger.debug(run_cmd)
     try:
-        container_id = subprocess.check_output(run_cmd, shell=True).decode().strip("\n")
+        container_id = subprocess.check_output(shlex.split(run_cmd), shell=False).decode().strip("\n")
     except subprocess.CalledProcessError:
         container_id = ""
     container_json = podman_container_inspect(container_id)
@@ -158,17 +165,26 @@ def craft_run_cmd(container, name):
     for param, arg in container["permissions"].items():
         if type(arg) is list:
             for nest in arg:
+                if "$XDG_RUNTIME_DIR" in nest:
+                    nest = nest.replace("$XDG_RUNTIME_DIR", xdg_runtime_path)
+                if "$WAYLAND_DISPLAY" in nest:
+                    nest = nest.replace("$WAYLAND_DISPLAY", wayland_display)
+                if "$HOME" in nest:
+                    nest = nest.replace("$HOME", home_dir)
+                if "$UID" in nest:
+                    nest = nest.replace("$UID", user_id)
                 args += "--" + param + " " + nest + " "
         elif type(arg) is bool:
             args += "--" + param + "=" + str(arg).lower() + " "
         else:
             args += "--" + param + "=" + arg + " "
+    random_end = "-" + str(random.randint(1000,9999)) + " "
     run_cmd = (
         "podman run --rm -d --hostname "
         + name
         + " --name "
         + name
-        + "-$RANDOM "
+        + random_end
         + args
         + container["repo"]
         + "/"
@@ -179,7 +195,6 @@ def craft_run_cmd(container, name):
 
 def install_desktop(container, name):
     run_cmd = craft_run_cmd(container, name)
-    home_dir = os.path.expanduser("~")
     template = (
         jinja2.Environment(
             loader=jinja2.FileSystemLoader(searchpath="./"), autoescape=True
@@ -317,7 +332,7 @@ def container_loop(container, args):
 
 def list_containers():
     podman_image_list = "podman image list --format json"
-    get_image = subprocess.check_output(podman_image_list, shell=True).decode()
+    get_image = subprocess.check_output(shlex.split(podman_image_list), shell=False).decode()
     image_list = json.loads(get_image)
 
     print("Available Containers in config:")

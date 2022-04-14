@@ -14,6 +14,7 @@
 
 - [x] Fedora 35
 - [ ] Ubuntu 21.10 #3
+- [ ] Debian 11
 
 #### Fedora 35
 ```
