@@ -63,4 +63,4 @@ ENV QT_X11_NO_MITSHM=1
 # Pulse socket
 ENV PULSE_SERVER="unix:/run/user/$USER/pulse/native"
 
-ENTRYPOINT /usr/bin/firefox --private --private-window
+ENTRYPOINT /usr/bin/firefox --new-window
