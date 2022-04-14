@@ -4,7 +4,7 @@
 - run any application without root privileges
 - creates usable "Desktop applications" to integrate into your normal workflow
 - cut network access for applications that work with confidential stuff to prevent accidental leakage
-- set MEM and CPU boundaries for your applications (disclaimer: cpu limits not implemented yet)
+- set MEM and CPU boundaries for your applications
 - easy rollback with version pinning
 - works on wayland
 
