@@ -309,7 +309,7 @@ def container_loop(container, args):
                 build_image(container, name)
             if args.install:
                 install_desktop(container, name)
-            if args.run and image is not None:
+            if args.run and image is None:
                 new_container = run_image(container, name)
                 started_container.append(new_container)
         else:
