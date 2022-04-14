@@ -13,12 +13,16 @@
 #### Tested and verified:
 
 - [x] Fedora 35
-- [ ] Ubuntu 21.10 #3
+- [x] Ubuntu 21.10
+- [x] Debian 11.3
+
 
 #### Fedora 35
 ```
+sudo dnf install python3-pip
 pip install --user pyyaml
 pip install --user jinja2
+git clone https://github.com/mody5bundle/capps && cd capps/
 checkmodule -M -m -o capps.mod capps.te
 semodule_package -o capps.pp -m capps.mod
 sudo semodule -i capps.pp
@@ -26,11 +30,19 @@ sudo semodule -i capps.pp
 ```
 
 ### Ubuntu 21.10
-
 ```
 sudo apt install git python3 python3-pip podman
 pip3 install jinja2
+git clone https://github.com/mody5bundle/capps && cd capps/
 ./capps.py -a sandbox -d
+```
+
+### Debian 11.3
+```
+sudo apt install git python3 python3-pip podman
+pip3 install jinja2 pyyaml
+git clone https://github.com/mody5bundle/capps && cd capps/
+./capps.py -a spotify -d -s
 ```
 
 ## Usage
