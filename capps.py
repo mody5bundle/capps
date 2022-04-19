@@ -228,12 +228,15 @@ def craft_run_cmd(container, name):
 
 def install_desktop(container, name):
     run_cmd = craft_run_cmd(container, name)
+    shell_run_cmd= "" # expand run command to one long string
+    for cmd in run_cmd:
+        shell_run_cmd += cmd + " "
     template = (
         jinja2.Environment(
             loader=jinja2.FileSystemLoader(searchpath="./"), autoescape=True
         )
         .get_template("template.desktop.j2")
-        .render(name=name, run_cmd=run_cmd)
+        .render(name=name, shell_run_cmd=shell_run_cmd)
     )
     desktop_file_path = os.path.join(
         home_dir, ".local/share/applications/", name + "-podman.desktop"
