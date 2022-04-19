@@ -11,7 +11,7 @@ volumes:
   - &x11 /tmp/.X11-unix:/tmp/.X11-unix:ro
 container:
   firefox:
-    versioncmd: "firefox --version | awk \"'\"{print \\$3}\"'\""
+    versioncmd: "firefox --version | awk '{print $3}'"
     repo: "localhost"
     file: "firefox.dockerfile"
     path: "./container/firefox/"
@@ -24,11 +24,11 @@ container:
       cap-add:
         - "cap_sys_chroot"
       volume:
-        - "$HOME/Downloads/:/home/firefox/Downloads:rw"
+        - "$HOME/Downloads/:/home/firefox/Downloads:z"
         - *sound
         - *wayland
   spotify:
-    versioncmd: "spotify --version | awk \"'\"{print \\$3}\"'\"  | tr -d ,"
+    versioncmd: "spotify --version | awk '{print $3}'  | tr -d ,"
     repo: "localhost"
     file: "spotify.dockerfile"
     path: "./container/spotify/"
@@ -48,7 +48,7 @@ container:
         - *sound
         - *wayland
   chromium:
-    versioncmd: "chromium-browser --version | awk \"'\"{print \\$2}\"'\""
+    versioncmd: "chromium-browser --version | awk '{print $2}'"
     repo: "localhost"
     file: "chromium.dockerfile"
     path: "./container/chromium/"
@@ -67,7 +67,7 @@ container:
         - *sound
         - *wayland
   atom:
-    versioncmd: "atom --version | head -n1 | awk \"'\"{print \\$3}\"'\""
+    versioncmd: "atom --version | head -n1 | awk '{print $3}'"
     repo: "localhost"
     file: "atom.dockerfile"
     path: "./container/atom/"
@@ -86,7 +86,7 @@ container:
         - $HOME/.config/Atom/:/home/atom/.config/Atom:z
         - *wayland
   vlc:
-    versioncmd: "vlc --version | grep VLC | head -n 1 | awk \"'\"{print \\$3}\"'\""
+    versioncmd: "vlc --version | grep VLC | head -n 1 | awk '{print $3}'"
     repo: "localhost"
     file: "vlc.dockerfile"
     path: "./container/vlc/"
@@ -134,7 +134,7 @@ container:
         - *x11
         - *wayland
   sandbox:
-    versioncmd: "gnome-terminal --version | awk \"'\"{print \\$4}\"'\""
+    versioncmd: "gnome-terminal --version | awk '{print $4}'"
     repo: "localhost"
     file: "bash.dockerfile"
     path: "./container/sandbox/"

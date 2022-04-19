@@ -11,7 +11,6 @@ import jinja2
 import os
 from argparse import ArgumentParser
 from shutil import copyfile
-import shlex
 
 user_id = str(os.getuid())
 podman_path = "/usr/bin/podman"
@@ -19,6 +18,7 @@ wayland_display = os.path.expandvars("$WAYLAND_DISPLAY")
 xdg_runtime_path = os.path.expandvars("$XDG_RUNTIME_DIR")
 pulse_socket = "/run/user/" + user_id + "/pulse/native"
 home_dir = os.path.expanduser("~")
+
 
 def load_config(path="config.yml"):
     logger.info("Loading config: " + path)
@@ -31,10 +31,10 @@ def load_config(path="config.yml"):
 
 def podman_image_inspect(id):
     logger.info("Inspecting image: " + id)
-    check_image = "podman image inspect --format json " + id
+    check_image = [podman_path, "image", "inspect", "--format", "json", id]
     try:
         image_json = json.loads(
-            subprocess.check_output(shlex.split(check_image), shell=False).decode()
+            subprocess.check_output(check_image, shell=False).decode()
         )
     except subprocess.CalledProcessError:
         image_json = ""
@@ -43,11 +43,12 @@ def podman_image_inspect(id):
 
 def podman_container_inspect(id):
     logger.info("Inspecting container: " + id)
-    check_container = "podman container inspect --format json " + id
+    check_container = [podman_path, "container", "inspect", "--format", "json", id]
+    logger.debug(check_container)
     try:
         container_json = json.loads(
             subprocess.check_output(
-                shlex.split(check_container), shell=False, stderr=subprocess.STDOUT
+                check_container, shell=False, stderr=subprocess.STDOUT
             ).decode()
         )[0]
     except subprocess.CalledProcessError:
@@ -56,25 +57,25 @@ def podman_container_inspect(id):
 
 
 def podman_stats(id):
-    container_stats = "podman stats --no-stream --format json " + " ".join(id)
+    container_stats = [podman_path, "stats", "--no-stream", "--format", "json", id[0]]
+    logger.debug(container_stats)
     try:
         json_stats = json.loads(
             subprocess.check_output(
-                shlex.split(container_stats), shell=False, stderr=subprocess.STDOUT
+                container_stats, shell=False, stderr=subprocess.STDOUT
             ).decode()
         )
     except subprocess.CalledProcessError:
         logger.info("No stats for container: " + " ".join(id))
         json_stats = ""
     logger.info("collected stats for container: " + " ".join(id))
-    logger.debug(container_stats)
     logger.debug(json_stats)
     return json_stats
 
 
 def check_images(config, name):
-    podman_image_list = "podman image list --format json"
-    get_image = subprocess.check_output(shlex.split(podman_image_list), shell=False).decode()
+    podman_image_list = [podman_path, "image", "list", "--format", "json"]
+    get_image = subprocess.check_output(podman_image_list, shell=False).decode()
     image_list = json.loads(get_image)
     for image in image_list:
         if not "Dangling" in image:
@@ -82,7 +83,7 @@ def check_images(config, name):
             pattern = re.findall(image_name, image["Names"][0])
             if image["Names"][0] in pattern:
                 now = time.time()
-                age = int((now - image["Created"]) / 60 / 60 / 24 )
+                age = int((now - image["Created"]) / 60 / 60 / 24)
                 version = image["Names"][0]
                 logger.info(
                     "Found image: " + image["Names"][0] + " " + str(age) + " Days old"
@@ -91,59 +92,85 @@ def check_images(config, name):
 
 
 def build_image(image, name):
-    flags = "--pull-always --rm --force-rm --no-cache --squash-all --quiet"
-    build_cmd = (
-        "podman image build "
-        + flags
-        + " --build-arg USER="
-        + user_id
-        + " -t "
-        + image["repo"]
-        + "/"
-        + name
-        + " -f "
-        + image["path"]
-        + image["file"]
-        + " "
-        + image["path"]
-    )
-    version_cmd = (
-        "podman run --rm -it --entrypoint bash "
-        + image["repo"]
-        + "/"
-        + name
-        + " -c \""
-        + image["versioncmd"]
-        + "\""
-    )
-    logger.debug("Version command: " + version_cmd)
+    build_cmd = [
+        podman_path,
+        "image",
+        "build",
+        "--build-arg=USER=" + str(user_id),
+        "--pull-always",
+        "--rm",
+        "--force-rm",
+        "--no-cache",
+        "--squash-all",
+        "--quiet",
+        "-t",
+        image["repo"] + "/" + name,
+        "-f",
+        image["path"] + image["file"],
+        image["path"],
+    ]
+    version_cmd = [
+        podman_path,
+        "run",
+        "--rm",
+        "-it",
+        "--entrypoint",
+        "bash",
+        image["repo"] + "/" + name,
+        "-c",
+        image["versioncmd"],
+    ]
+    logger.debug("Version command: " + str(version_cmd))
     try:
-      old_version = subprocess.check_output(shlex.split(version_cmd), shell=False).decode().strip("\n")
-      logger.info("Old Version for for: " + image["repo"] + "/" + name + ": " + old_version)
+        old_version = (
+            subprocess.check_output(version_cmd, shell=False).decode().strip("\n")
+        )
+        logger.info(
+            "Old Version for for: " + image["repo"] + "/" + name + ": " + old_version
+        )
     except subprocess.CalledProcessError as e:
-      logger.info("Old Version for for: " + image["repo"] + "/" + name + ": " + "Not Found!")
-    logger.debug("Build command: " + build_cmd)
+        logger.info(
+            "Old Version for for: " + image["repo"] + "/" + name + ": " + "Not Found!"
+        )
+    logger.debug("Build command: " + str(build_cmd))
     logger.info("Starting build for: " + image["repo"] + "/" + name)
     try:
-        new_image = subprocess.check_output(shlex.split(build_cmd), shell=False).decode().strip("\n")
+        new_image = subprocess.check_output(build_cmd, shell=False).decode().strip("\n")
     except subprocess.CalledProcessError:
         new_image = ""
     logger.info("Build image for: " + name + ": [" + new_image + "]")
-    new_version = subprocess.check_output(shlex.split(version_cmd), shell=False).decode().strip("\n").strip("\r")
-    tag_cmd = (
-      "podman tag "
-      + new_image
-      + " "
-      + image["repo"]
-      + "/"
-      + name
-      + ":"
-      + new_version)
-    logger.info("Tagging new Version for for: " + tag_cmd)
+    new_version = (
+        subprocess.check_output(version_cmd, shell=False)
+        .decode()
+        .strip("\n")
+        .strip("\r")
+    )
+    tag_cmd = [
+        podman_path,
+        "image",
+        "tag",
+        new_image,
+        image["repo"] + "/" + name + ":" + new_version,
+    ]
+    logger.debug(tag_cmd)
+    logger.info(
+        "Tagging new Version for for: " + image["repo"] + "/" + name + ":" + new_version
+    )
     try:
-        tag_image_version = subprocess.check_output(shlex.split(tag_cmd), shell=False).decode().strip("\n")
+        tag_image_version = (
+            subprocess.check_output(tag_cmd, shell=False).decode().strip("\n")
+        )
     except subprocess.CalledProcessError:
         tag_image_version = ""
+        logger.warning(
+            "Tagging new Version for for: "
+            + image["repo"]
+            + "/"
+            + name
+            + ":"
+            + new_version
+            + " failed"
+        )
     return new_image
 
 
@@ -151,7 +178,9 @@ def run_image(container, name):
     run_cmd = craft_run_cmd(container, name)
     logger.debug(run_cmd)
     try:
-        container_id = subprocess.check_output(shlex.split(run_cmd), shell=False).decode().strip("\n")
+        container_id = (
+            subprocess.check_output(run_cmd, shell=False).decode().strip("\n")
+        )
     except subprocess.CalledProcessError:
         container_id = ""
     container_json = podman_container_inspect(container_id)
@@ -161,9 +190,9 @@ def run_image(container, name):
 
 
 def craft_run_cmd(container, name):
-    args = ""
+    args = []
     for param, arg in container["permissions"].items():
-        if type(arg) is list:
+        if type(arg) is list and "volume" == param:
             for nest in arg:
                 if "$XDG_RUNTIME_DIR" in nest:
                     nest = nest.replace("$XDG_RUNTIME_DIR", xdg_runtime_path)
@@ -173,23 +202,27 @@ def craft_run_cmd(container, name):
                     nest = nest.replace("$HOME", home_dir)
                 if "$UID" in nest:
                     nest = nest.replace("$UID", user_id)
-                args += "--" + param + " " + nest + " "
+                args.append("--" + param + "=" + nest)
+        elif type(arg) is list:
+            for nest in arg:
+                args.append("--" + param + "=" + nest)
         elif type(arg) is bool:
-            args += "--" + param + "=" + str(arg).lower() + " "
+            args.append("--" + param + "=" + str(arg).lower())
         else:
-            args += "--" + param + "=" + arg + " "
-    random_end = "-" + str(random.randint(1000,9999)) + " "
-    run_cmd = (
-        "podman run --rm -d --hostname "
-        + name
-        + " --name "
-        + name
-        + random_end
-        + args
-        + container["repo"]
-        + "/"
-        + name
-    )
+            args.append("--" + param + "=" + arg)
+    random_end = "-" + str(random.randint(1000, 9999))
+    run_cmd = [
+        podman_path,
+        "run",
+        "--rm",
+        "-d",
+        "--hostname",
+        name,
+        "--name=" + name + random_end,
+    ]
+    for arg in args:
+        run_cmd.append(arg)
+    run_cmd.append(container["repo"] + "/" + name)
     return run_cmd
 
 
@@ -202,8 +235,8 @@ def install_desktop(container, name):
         .get_template("template.desktop.j2")
         .render(name=name, run_cmd=run_cmd)
     )
-    desktop_file_path = (
-        os.path.join(home_dir, ".local/share/applications/", name + "-podman.desktop")
+    desktop_file_path = os.path.join(
+        home_dir, ".local/share/applications/", name + "-podman.desktop"
     )
     icon_src_path = container["path"] + container["icon"]
     icon_file_path = os.path.join(home_dir, ".local/share/icons/", name + "-podman.png")
@@ -263,7 +296,11 @@ def get_args():
         help="enable verbose log output",
     )
     parser.add_argument(
-        "-s", "--stats", default=False, action="store_true", help="enable container stats output"
+        "-s",
+        "--stats",
+        default=False,
+        action="store_true",
+        help="enable container stats output",
     )
     parser.add_argument(
         "-d",
@@ -330,35 +367,45 @@ def container_loop(container, args):
         else:
             logger.warning("No config for container " + name + " found!")
 
+
 def list_containers():
-    podman_image_list = "podman image list --format json"
-    get_image = subprocess.check_output(shlex.split(podman_image_list), shell=False).decode()
+    podman_image_list = [podman_path, "image", "list", "--format", "json"]
+    get_image = subprocess.check_output(podman_image_list, shell=False).decode()
     image_list = json.loads(get_image)
 
     print("Available Containers in config:")
     for container in config["container"].items():
-      print(container[0], end=': ', flush=True)
-      print("\tMem: " + container[1]["permissions"]["memory"], end=', ', flush=True)
-      print("\tCapabilities: ", end=' ', flush=True)
-      try:
-          print(container[1]["permissions"]["cap-add"], end=', ', flush=True)
-          print("\tcap-drop: " + container[1]["permissions"]["cap-drop"])
-      except KeyError:
-          print("\tcap-drop: " + container[1]["permissions"]["cap-drop"])
-      print("Available images on host for " + container[0] + ": ")
-      for image in image_list:
-          if not "Dangling" in image:
-              image_name = container[1]["repo"] + "/" + container[0] + ".*"
-              inspected_image = podman_image_inspect(image["Id"])
-              pattern = re.findall(image_name, inspected_image[0]["RepoTags"][0])
-              if image["Names"][0] in pattern:
-                  now = time.time()
-                  age = int((now - image["Created"]) / 60 )
-                  print(image["Names"], end='\t')
-                  print("Entrypoint: " + str(inspected_image[0]["Config"]["Entrypoint"]), end='\t')
-                  print("Size: " + str(int(inspected_image[0]["Size"] / 1000 / 1000)) + " MB", end='\t')
-                  print(" " + "\t" + str(age) + " Minutes old.")
-      print()
+        print(container[0], end=": ", flush=True)
+        print("\tMem: " + container[1]["permissions"]["memory"], end=", ", flush=True)
+        print("\tCapabilities: ", end=" ", flush=True)
+        try:
+            print(container[1]["permissions"]["cap-add"], end=", ", flush=True)
+            print("\tcap-drop: " + container[1]["permissions"]["cap-drop"])
+        except KeyError:
+            print("\tcap-drop: " + container[1]["permissions"]["cap-drop"])
+        print("Available images on host for " + container[0] + ": ")
+        for image in image_list:
+            if not "Dangling" in image:
+                image_name = container[1]["repo"] + "/" + container[0] + ".*"
+                inspected_image = podman_image_inspect(image["Id"])
+                pattern = re.findall(image_name, inspected_image[0]["RepoTags"][0])
+                if image["Names"][0] in pattern:
+                    now = time.time()
+                    age = int((now - image["Created"]) / 60)
+                    print(image["Names"], end="\t")
+                    print(
+                        "Entrypoint: "
+                        + str(inspected_image[0]["Config"]["Entrypoint"]),
+                        end="\t",
+                    )
+                    print(
+                        "Size: "
+                        + str(int(inspected_image[0]["Size"] / 1000 / 1000))
+                        + " MB",
+                        end="\t",
+                    )
+                    print(" " + "\t" + str(age) + " Minutes old.")
+        print()
 
 
 def status_loop(container, args):
@@ -402,6 +449,6 @@ if __name__ == "__main__":
     started_container = []
     container = config["container"].items()
     if args.list:
-      list_containers()
+        list_containers()
     container_loop(container, args)
     status_loop(container, args)
