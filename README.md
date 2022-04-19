@@ -17,6 +17,7 @@
 - [x] Debian 11.3
 
 
+
 #### Fedora 35
 ```
 sudo dnf install python3-pip
