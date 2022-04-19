@@ -24,7 +24,7 @@ container:
       cap-add:
         - "cap_sys_chroot"
       volume:
-        - "$HOME/Downloads/:/home/firefox/Downloads:z"
+        - "$HOME/Downloads/:/home/firefox/Downloads:rw"
         - *sound
         - *wayland
   spotify:
